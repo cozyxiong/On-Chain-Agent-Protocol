@@ -1,0 +1,13 @@
+{
+  "chainId": 11155111,
+  "entryPoint": "0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108",
+  "agentRegistry": "0xFEC031f7A3BdeE9d21c2F6f2faBD25F9d39b44a7",
+  "intentManager": "0xC0a9cc1Abb5151ce7fF706fCe3f845Beab0391A2",
+  "batchExecutor": "0xD7071786Eb55997fa08db97893CB736CBa4A2e4a",
+  "smartAccountFactory": "0xA1E3DE4e214E0C58cc45013717970b5Af72B4216",
+  "signedIntentEscrow": "0xE8690fF6b9Ba606DC1691983BBC06A886e5c200f",
+  "smoke": {
+    "agentId": "",
+    "smartAccount": ""
+  }
+}

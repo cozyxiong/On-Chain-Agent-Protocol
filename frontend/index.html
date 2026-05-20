@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AAP Agent Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">AI-Powered On-Chain Agent Protocol</p>
+        <h1>Agent Intent Console</h1>
+      </div>
+      <div class="status-strip">
+        <span id="backendStatus" class="status-dot"></span>
+        <span id="backendLabel">Checking backend</span>
+      </div>
+    </header>
+
+    <main class="product-shell">
+      <section class="hero-panel">
+        <div class="hero-copy">
+          <p class="eyebrow">Intent Execution</p>
+          <h2>Tell your agent what to do on Sepolia.</h2>
+          <p class="subcopy">
+            Describe a transfer, swap, rebalance, or scheduled task. The agent parses it,
+            executes a capped test transaction, and returns verifiable Etherscan links.
+          </p>
+        </div>
+        <div class="account-card">
+          <div class="panel-heading tight">
+            <div>
+              <p class="eyebrow">Account</p>
+              <h2>Wallet Access</h2>
+            </div>
+            <button id="connectWalletButton" class="secondary-button">Connect Wallet</button>
+          </div>
+          <input id="userId" type="hidden" value="user-1" />
+          <input id="agentId" type="hidden" value="agent-1" />
+          <label>
+            Connected wallet
+            <input id="ownerWallet" value="" placeholder="Connect wallet to fill owner address" readonly />
+          </label>
+          <div class="mode-card">
+            <strong>Default mode</strong>
+            <span>EOA EIP-712 intent signing. Best for normal users: sign an intent authorization now, then let the execution layer run it when eligible.</span>
+          </div>
+          <select id="executionMode" class="hidden">
+            <option value="owner" selected>Owner wallet direct</option>
+            <option value="agent">Agent session wallet</option>
+          </select>
+
+          <details class="advanced-card">
+            <summary>
+              <span>Advanced Agent Wallet</span>
+              <small>Optional smart account delegation</small>
+            </summary>
+            <div class="advanced-body">
+              <div class="agent-account-box">
+                <div>
+                  <span>Agent smart account</span>
+                  <strong id="smartAccountStatus">Connect wallet to discover</strong>
+                </div>
+                <input id="smartAccount" value="" placeholder="Connect wallet to discover smart account" readonly />
+                <div class="button-row left">
+                  <button id="createSmartAccountButton" class="secondary-button">Create Smart Account</button>
+                </div>
+              </div>
+              <div class="fund-card">
+                <div>
+                  <strong>Fund Agent Account</strong>
+                  <small id="smartAccountBalance">Balance: -- ETH</small>
+                </div>
+                <p class="fund-note">Send ETH from your connected wallet to the smart account before automated batch execution.</p>
+                <div class="amount-chips" aria-label="Funding amount shortcuts">
+                  <button type="button" class="amount-chip" data-fund-amount="0.005">0.005 ETH</button>
+                  <button type="button" class="amount-chip" data-fund-amount="0.01">0.01 ETH</button>
+                  <button type="button" class="amount-chip" data-fund-amount="0.02">0.02 ETH</button>
+                </div>
+                <label>
+                  Amount
+                  <div class="fund-input-row">
+                    <input id="fundAmount" inputmode="decimal" value="0.01" placeholder="0.01" />
+                    <button id="fundSmartAccountButton" class="primary-button" type="button">Fund</button>
+                  </div>
+                </label>
+              </div>
+              <label class="switch-row">
+                <span>
+                  Use Agent Wallet for intents
+                  <small>When enabled, new intents use Smart Account Agent Authorization instead of the default EIP-712 intent signature flow.</small>
+                </span>
+                <input id="useAgentWalletToggle" type="checkbox" />
+              </label>
+              <p class="helper-text">
+                Use this only when you want a smart account to delegate limited execution rights to a separate
+                agent/session wallet. For daily testing, keep the default EOA path.
+              </p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <div class="right-rail">
+        <section class="chat-panel">
+          <div class="messages" id="messages">
+            <div class="message assistant">
+              <strong>Agent</strong>
+              <p>Hello. I can turn your on-chain intent into a Sepolia transaction. Choose a template or describe a transfer, swap, rebalance, or scheduled task.</p>
+            </div>
+          </div>
+          <div class="intent-templates" aria-label="Intent templates">
+            <button class="template-button" data-template="transfer">Transfer</button>
+            <button class="template-button" data-template="scheduled">Scheduled</button>
+            <button class="template-button" data-template="swap">Swap</button>
+            <button class="template-button" data-template="rebalance">Rebalance</button>
+          </div>
+          <div class="composer">
+            <textarea id="aiMessage" rows="3" placeholder="Describe what you want your agent to do on Sepolia..."></textarea>
+            <div class="composer-actions">
+              <button id="parseIntentButton" class="secondary-button">Preview</button>
+              <button id="sendIntentButton" class="primary-button">Send</button>
+            </div>
+          </div>
+          <pre id="aiResult" class="output-box hidden">No AI output yet.</pre>
+        </section>
+
+        <div id="agentControlsPanel" class="agent-controls hidden">
+          <section class="authorization-card authorization-panel">
+            <div class="auth-heading">
+              <div>
+                <p class="eyebrow">Agent Authorization</p>
+                <h2>Delegate execution rights</h2>
+              </div>
+              <div class="auth-actions">
+                <button id="revokeAgentButton" class="secondary-button compact-button" type="button">Revoke Agent</button>
+                <label class="mini-switch">
+                  <span>Unlimited</span>
+                  <input id="unlimitedAuthorizationToggle" type="checkbox" />
+                </label>
+              </div>
+            </div>
+            <label>
+              Agent/session wallet
+              <input id="agentAddress" value="" placeholder="Separate wallet authorized to execute" />
+            </label>
+            <label>
+              Authorized target
+              <input id="authorizedTarget" value="0x0000000000000000000000000000000000000000" />
+            </label>
+            <label>
+              Per-action limit
+              <div class="fund-input-row">
+                <input id="permissionLimitEth" inputmode="decimal" value="0.01" placeholder="0.01" />
+                <button id="authorizeAgentButton" class="primary-button" type="button">Authorize Limited</button>
+              </div>
+            </label>
+          </section>
+
+          <section class="authorization-card revoke-panel">
+            <div class="auth-heading">
+              <div>
+                <p class="eyebrow">Revoke Access</p>
+              </div>
+            </div>
+            <div class="revoke-row">
+              <select id="revokeAuthorizationSelect"></select>
+              <button id="revokeTargetButton" class="danger-primary-button" type="button">Revoke Target</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <section class="performance-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Performance Dashboard</p>
+            <h2>Network Execution Metrics</h2>
+          </div>
+          <span id="metricsUpdated" class="muted-cell">Waiting for metrics</span>
+        </div>
+        <div class="metrics-grid" id="metricsCards"></div>
+      </section>
+
+      <section class="history-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Execution History</p>
+            <h2>Recent Results</h2>
+          </div>
+          <button id="refreshButton" class="secondary-button">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Transaction</th>
+              </tr>
+            </thead>
+            <tbody id="historyRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
