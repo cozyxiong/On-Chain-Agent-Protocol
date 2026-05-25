@@ -48,7 +48,7 @@
           </div>
           <select id="executionMode" class="hidden">
             <option value="owner" selected>Owner wallet direct</option>
-            <option value="agent">Agent session wallet</option>
+            <option value="agent">Platform Agent wallet</option>
           </select>
 
           <details class="advanced-card">
@@ -89,13 +89,12 @@
               <label class="switch-row">
                 <span>
                   Use Agent Wallet for intents
-                  <small>When enabled, new intents use Smart Account Agent Authorization instead of the default EIP-712 intent signature flow.</small>
+                  <small>When enabled, new intents use the platform Agent through your authorized Smart Account.</small>
                 </span>
                 <input id="useAgentWalletToggle" type="checkbox" />
               </label>
               <p class="helper-text">
-                Use this only when you want a smart account to delegate limited execution rights to a separate
-                agent/session wallet. For daily testing, keep the default EOA path.
+                Use this when you want the platform Agent to execute approved intents from your Smart Account without asking for a wallet signature every time.
               </p>
             </div>
           </details>
@@ -142,8 +141,9 @@
               </div>
             </div>
             <label>
-              Agent/session wallet
-              <input id="agentAddress" value="" placeholder="Separate wallet authorized to execute" />
+              Platform Agent
+              <input id="agentAddress" value="" placeholder="Loading platform Agent..." readonly />
+              <small id="platformAgentStatus" class="field-note">Loaded from backend signer</small>
             </label>
             <label>
               Authorized target

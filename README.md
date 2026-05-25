@@ -12,7 +12,7 @@ The current implementation contains:
 - `BatchExecutor`: batched execution with per-intent result events.
 - `MockERC20`: local token for protocol tests.
 - `AgentSmartAccount`: ERC-4337-style smart account with owner execution,
-  agent/session-wallet authorization, target/value/expiry limits, wildcard
+  platform Agent authorization, target/value/expiry limits, wildcard
   unlimited authorization, and `executeBatchAgentCalls`.
 - `SignedIntentEscrow`: EIP-712 scheduled intent settlement with replay
   protection, deadline checks, escrow funding, and batch execution.
@@ -38,28 +38,33 @@ Users connect an EOA wallet and sign transactions directly. For scheduled
 intents, users sign EIP-712 typed data now, optionally fund escrow, and the
 coordinator relayer executes later.
 
-### Advanced Agent Wallet Mode
+### Platform Agent Multi-User Mode
 
-Users create or select a smart account, fund it, and authorize an Agent/session
-wallet. After authorization, the Agent can execute permitted calls through the
-smart account without asking the Owner to sign every action.
+Each user connects their own EOA wallet, creates or selects their own smart
+account, funds it, and authorizes the platform Agent signer returned by the
+backend. After authorization, the platform Agent can execute permitted calls
+through that user's smart account without asking the Owner to sign every action.
 
-In this demo, the backend simulates the Agent signer with `AGENT_PRIVATE_KEY`
-or falls back to `PRIVATE_KEY`. The frontend `Agent/session wallet` must match:
+In this demo, the backend simulates the platform Agent signer with
+`AGENT_PRIVATE_KEY` or falls back to `PRIVATE_KEY`. The frontend loads and locks
+this address from:
 
 ```text
 GET /agent/status
 ```
 
-Production deployments should replace this demo private-key signer with an
-external Agent node, MPC/KMS/HSM, TEE runtime, or ERC-4337 session-key signer.
+This makes the prototype usable by multiple people: users never provide an Agent
+private key; they only authorize the shared platform Agent against their own
+Smart Account. Production deployments should replace this demo private-key
+signer with an external Agent node, MPC/KMS/HSM, TEE runtime, or ERC-4337
+session-key signer.
 
 ## Batching
 
 The strongest live batching path is:
 
 ```text
-Same Smart Account + authorized Agent signer + multiple compatible intents
+Same Smart Account + authorized platform Agent signer + multiple compatible intents
   -> executeBatchAgentCalls
   -> one Sepolia transaction
 ```

@@ -98,14 +98,14 @@ Implements an ERC-4337-style smart account. It supports:
 
 - Owner-controlled execution.
 - EntryPoint-style validation.
-- Agent/session wallet authorization.
+- Platform Agent authorization.
 - Target-specific delegated permissions.
 - `executeBatchAgentCalls` for multiple delegated calls in one transaction.
 - Wildcard unlimited authorization using the zero address target for all-target
   execution rights.
 
-This gives advanced users a production-like path where the user's EOA owns a
-smart account, while a limited agent/session wallet can execute authorized work.
+This gives users a production-like path where the user's EOA owns a smart
+account, while the platform Agent can execute only the work the user authorized.
 
 ### SignedIntentEscrow
 
@@ -193,7 +193,7 @@ Trade-off:
 
 - Native ETH scheduled transfers require escrow funding before execution.
 
-### Advanced Mode: Smart Account Agent Authorization
+### Advanced Mode: Platform Agent Multi-User Authorization
 
 This path is designed for a more productized agent-wallet experience.
 
@@ -201,9 +201,10 @@ Flow:
 
 ```text
 EOA creates or controls smart account
-  -> EOA authorizes an agent/session wallet
+  -> Frontend loads the platform Agent address from backend
+  -> EOA authorizes the platform Agent
   -> Permission includes target, value limit, and expiry
-  -> Backend-simulated Agent signer or external Agent submits execution
+  -> Backend-simulated platform Agent signer or external Agent submits execution
   -> Smart account checks permission
   -> Agent can execute one call or batch calls
 ```
@@ -234,9 +235,9 @@ The current configured demo Agent signer is exposed by:
 GET /agent/status
 ```
 
-For local Sepolia testing, the `Agent/session wallet` entered in the frontend
-must match the backend signer address, otherwise the smart account correctly
-reverts with `AgentNotAuthorized`.
+For Sepolia testing, the frontend now loads and locks the platform Agent address
+from the backend signer. Each user only connects their own EOA and authorizes
+that shared platform Agent for their own Smart Account.
 
 ## 8. Coordinator Worker
 
@@ -280,8 +281,8 @@ This is used by the default EOA scheduled mode.
 
 ### Agent Smart Account Batch
 
-`AgentSmartAccount.executeBatchAgentCalls` allows an authorized agent/session
-wallet to execute multiple permitted calls through the smart account in one
+`AgentSmartAccount.executeBatchAgentCalls` allows the authorized platform Agent
+to execute multiple permitted calls through the smart account in one
 transaction.
 
 This is used by the advanced smart-account mode for both immediate multi-action

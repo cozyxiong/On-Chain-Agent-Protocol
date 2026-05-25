@@ -598,6 +598,17 @@ select {
   padding: 11px 12px;
 }
 
+.readonly-input {
+  background: #f3f8f5;
+  color: var(--muted);
+}
+
+.field-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 textarea {
   resize: vertical;
 }

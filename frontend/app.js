@@ -4,6 +4,7 @@ const state = {
   lastIntent: null,
   metrics: null,
   walletConnected: false,
+  platformAgentAddress: "",
   autoRefreshTimer: null,
   autoRefreshing: false,
   receiptTimers: new Set(),
@@ -52,6 +53,7 @@ const el = {
   fundSmartAccountButton: document.querySelector("#fundSmartAccountButton"),
   agentControlsPanel: document.querySelector("#agentControlsPanel"),
   agentAddress: document.querySelector("#agentAddress"),
+  platformAgentStatus: document.querySelector("#platformAgentStatus"),
   authorizedTarget: document.querySelector("#authorizedTarget"),
   permissionLimitEth: document.querySelector("#permissionLimitEth"),
   unlimitedAuthorizationToggle: document.querySelector("#unlimitedAuthorizationToggle"),
@@ -101,7 +103,7 @@ el.useAgentWalletToggle.addEventListener("change", () => {
   appendMessage(
     "assistant",
     el.useAgentWalletToggle.checked
-      ? "Agent Wallet execution enabled. Make sure the smart account is created, authorized, funded if needed, and your wallet is switched to the agent/session address."
+      ? "Agent Wallet execution enabled. Create and fund your Smart Account, then authorize the platform Agent once."
       : "Agent Wallet execution disabled. Your connected EOA wallet will sign intents directly."
   );
 });
@@ -288,8 +290,7 @@ async function authorizeAgent(options = {}) {
     appendMessage("assistant", "Create or paste a smart account address before authorizing an agent.");
     return;
   }
-  if (!/^0x[a-fA-F0-9]{40}$/.test(el.agentAddress.value)) {
-    appendMessage("assistant", "Enter a separate agent/session wallet address before authorizing.");
+  if (!ensurePlatformAgentLoaded()) {
     return;
   }
   const unlimited = Boolean(options.unlimited);
@@ -301,7 +302,7 @@ async function authorizeAgent(options = {}) {
   if (el.smartAccount.value.toLowerCase() === el.agentAddress.value.toLowerCase()) {
     appendMessage(
       "assistant",
-      "Agent address should be a separate session/agent wallet. Using the same EOA only demonstrates wallet signing, not delegated execution."
+      "The platform Agent address should be separate from your Smart Account. Please check backend Agent configuration."
     );
   }
 
@@ -391,7 +392,7 @@ async function revokeAgentAuthorization(options = {}) {
     return;
   }
   if (!/^0x[a-fA-F0-9]{40}$/.test(agent)) {
-    appendMessage("assistant", "Enter the agent/session wallet address to revoke.");
+    appendMessage("assistant", "Platform Agent address is not loaded. Check backend Agent configuration.");
     return;
   }
   if (targetMode && (!selected || isWildcardTarget(selected.target))) {
@@ -404,7 +405,7 @@ async function revokeAgentAuthorization(options = {}) {
       targetMode ? "Revoke this target permission?" : "Revoke this Agent authorization?",
       "",
       `Smart Account: ${smartAccount}`,
-      `Agent/session wallet: ${agent}`,
+      `Platform Agent: ${agent}`,
       targetMode ? `Authorized target: ${selected.target}` : null,
       targetMode ? `Limit: ${authorizationLimitLabel(selected)}` : null,
       "",
@@ -610,8 +611,8 @@ async function prepareOwnerExecution(intent) {
 }
 
 async function prepareAgentExecution(intent) {
-  if (!/^0x[a-fA-F0-9]{40}$/.test(el.agentAddress.value)) {
-    throw new Error("Agent address is required for agent session wallet mode");
+  if (!isValidAddress(el.agentAddress.value)) {
+    throw new Error("Platform Agent address is not loaded. Check backend Agent configuration.");
   }
 
   const permission = await ensureActiveAgentAuthorization();
@@ -628,11 +629,11 @@ async function prepareAgentExecution(intent) {
 }
 
 async function executeAgentIntentViaBackend(intent) {
-  if (!/^0x[a-fA-F0-9]{40}$/.test(el.agentAddress.value)) {
-    throw new Error("Agent address is required for agent session wallet mode");
+  if (!isValidAddress(el.agentAddress.value)) {
+    throw new Error("Platform Agent address is not loaded. Check backend Agent configuration.");
   }
   await prepareAgentExecution(intent);
-  appendMessage("assistant", "Agent Wallet is authorized. The backend agent will submit this transaction without another wallet signature.");
+  appendMessage("assistant", "Platform Agent is authorized. The backend Agent will submit this transaction without another wallet signature.");
   const executed = await api("/agent/execute-intent", {
     method: "POST",
     body: {
@@ -645,11 +646,11 @@ async function executeAgentIntentViaBackend(intent) {
 }
 
 async function executeAgentBatchViaBackend(intents) {
-  if (!/^0x[a-fA-F0-9]{40}$/.test(el.agentAddress.value)) {
-    throw new Error("Agent address is required for smart-account batch mode");
+  if (!isValidAddress(el.agentAddress.value)) {
+    throw new Error("Platform Agent address is not loaded. Check backend Agent configuration.");
   }
   await prepareAgentBatchExecution(intents);
-  appendMessage("assistant", `Agent Wallet is authorized. The backend agent will submit one batch transaction for ${intents.length} action(s).`);
+  appendMessage("assistant", `Platform Agent is authorized. The backend Agent will submit one batch transaction for ${intents.length} action(s).`);
   const executed = await api("/agent/execute-batch-intents", {
     method: "POST",
     body: {
@@ -690,8 +691,8 @@ function recordBackendAgentExecution(executed) {
 }
 
 async function prepareAgentBatchExecution(intents) {
-  if (!/^0x[a-fA-F0-9]{40}$/.test(el.agentAddress.value)) {
-    throw new Error("Agent address is required for smart-account batch mode");
+  if (!isValidAddress(el.agentAddress.value)) {
+    throw new Error("Platform Agent address is not loaded. Check backend Agent configuration.");
   }
 
   const permission = await ensureActiveAgentAuthorization();
@@ -814,12 +815,11 @@ async function showAgentPermission() {
     appendMessage("assistant", "Open Advanced Agent Wallet and enter a smart account address first.");
     return;
   }
-  if (!/^0x[a-fA-F0-9]{40}$/.test(el.agentAddress.value)) {
-    appendMessage("assistant", "Enter the agent/session wallet address you want to check.");
+  if (!ensurePlatformAgentLoaded()) {
     return;
   }
 
-  appendMessage("assistant", "Checking current smart-account agent permission...");
+  appendMessage("assistant", "Checking current Smart Account permission for the platform Agent...");
   const permission = await api("/wallet/agent-permission", {
     method: "POST",
     body: {
@@ -1055,7 +1055,7 @@ async function executeImmediateWorkflow(intent, message = "") {
   renderTxLinks(records.flatMap((record) => record.transactions));
   appendMessage(
     "assistant",
-    `Submitted ${records.length} immediate transaction(s). For gas-saving one-transaction batching, enable Advanced Agent Wallet and authorize an agent/session wallet.`
+    `Submitted ${records.length} immediate transaction(s). For gas-saving one-transaction batching, enable Advanced Agent Wallet and authorize the platform Agent.`
   );
 }
 
@@ -1125,7 +1125,7 @@ async function scheduleIntentWorkflow(intent) {
     "assistant",
     signedWorkflow
       ? `Authorized ${records.length} scheduled action(s) with EIP-712 signatures and escrow settlement: ${scheduleText}.`
-      : `Scheduled ${records.length} agent action(s): ${scheduleText}. The authorized agent/session wallet will execute when each action is due.`
+      : `Scheduled ${records.length} agent action(s): ${scheduleText}. The authorized platform Agent will execute when each action is due.`
   );
 }
 
@@ -1176,8 +1176,8 @@ function ensureAgentScheduleReady() {
   if (!ensureExecutionReady("agent")) {
     throw new Error("Connect an owner wallet and set an Agent smart account before scheduling agent execution.");
   }
-  if (!/^0x[a-fA-F0-9]{40}$/.test(el.agentAddress.value)) {
-    throw new Error("Enter a valid agent/session wallet address before scheduling agent execution.");
+  if (!isValidAddress(el.agentAddress.value)) {
+    throw new Error("Platform Agent address is not loaded. Check backend Agent configuration.");
   }
 }
 
@@ -1573,22 +1573,35 @@ function ensureOwnerWalletConnected() {
 function ensureExecutionReady(mode) {
   const hasOwner = state.walletConnected && /^0x[a-fA-F0-9]{40}$/.test(el.ownerWallet.value);
   const hasSmartAccount = /^0x[a-fA-F0-9]{40}$/.test(el.smartAccount.value);
+  const hasPlatformAgent = isValidAddress(el.agentAddress.value);
 
   if (mode === "owner" && hasOwner) {
     return true;
   }
 
-  if (mode === "agent" && hasOwner && hasSmartAccount) {
+  if (mode === "agent" && hasOwner && hasSmartAccount && hasPlatformAgent) {
     return true;
   }
 
   appendMessage(
     "assistant",
     mode === "agent"
-      ? "Please connect an owner wallet and set an agent smart account before agent execution."
+      ? "Please connect an owner wallet, create a Smart Account, and wait for the platform Agent address to load before agent execution."
       : "Please connect an owner wallet before executing an intent."
   );
   return false;
+}
+
+function ensurePlatformAgentLoaded() {
+  if (isValidAddress(el.agentAddress.value)) {
+    return true;
+  }
+  appendMessage("assistant", "Platform Agent address is not loaded. Check that the backend is running and configured with AGENT_PRIVATE_KEY.");
+  return false;
+}
+
+function isValidAddress(value) {
+  return /^0x[a-fA-F0-9]{40}$/.test(String(value ?? "").trim());
 }
 
 function updateFundPanelVisibility() {
@@ -1670,7 +1683,7 @@ function renderAuthorizationOptions() {
     return;
   }
   if (!/^0x[a-fA-F0-9]{40}$/.test(currentAgent)) {
-    el.revokeAuthorizationSelect.innerHTML = `<option value="">Enter an agent wallet first</option>`;
+    el.revokeAuthorizationSelect.innerHTML = `<option value="">Platform Agent unavailable</option>`;
     updateRevokePreview();
     return;
   }
@@ -1684,7 +1697,7 @@ function renderAuthorizationOptions() {
   el.revokeAuthorizationSelect.innerHTML = usable
     .map(
       (item) =>
-        `<option value="${escapeHtml(item.id)}">${escapeHtml(short(item.agent))} -> ${escapeHtml(short(item.target))} / ${escapeHtml(authorizationLimitLabel(item))}</option>`
+        `<option value="${escapeHtml(item.id)}">${escapeHtml(short(item.target))} / ${escapeHtml(authorizationLimitLabel(item))}</option>`
     )
     .join("");
   updateRevokePreview();
@@ -1826,6 +1839,7 @@ async function refresh() {
     el.backendLabel.textContent = "Backend offline";
   }
 
+  await syncPlatformAgent();
   await syncCoordinatorJobs();
   await checkPendingReceiptsOnce();
   await syncDefaultSmartAccount();
@@ -1834,6 +1848,35 @@ async function refresh() {
   renderHistory();
   resumePendingReceipts();
   resumeScheduledJobs();
+}
+
+async function syncPlatformAgent() {
+  if (!el.agentAddress) return;
+  try {
+    const result = await api("/agent/status");
+    const agentAddress = result.agentAddress ?? "";
+    if (!isValidAddress(agentAddress)) {
+      throw new Error("Invalid platform Agent address");
+    }
+    state.platformAgentAddress = agentAddress;
+    el.agentAddress.value = agentAddress;
+    el.agentAddress.readOnly = true;
+    el.agentAddress.classList.add("readonly-input");
+    if (el.platformAgentStatus) {
+      el.platformAgentStatus.textContent = `Backend signer ${short(agentAddress)}`;
+    }
+  } catch {
+    state.platformAgentAddress = "";
+    el.agentAddress.value = "";
+    el.agentAddress.readOnly = true;
+    el.agentAddress.classList.add("readonly-input");
+    if (el.platformAgentStatus) {
+      el.platformAgentStatus.textContent = "Backend Agent unavailable";
+    }
+  } finally {
+    renderAuthorizationOptions();
+    updateRevokePreview();
+  }
 }
 
 function startAutoRefresh() {
