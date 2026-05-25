@@ -3,6 +3,20 @@
 Foundry + Solidity implementation of an AI-powered intent batching protocol for
 on-chain agents.
 
+## Project Deliverables
+
+- Protocol contracts for agent registration, intent management, smart-account
+  authorization, signed scheduled settlement, and batched execution.
+- Node.js backend for AI intent parsing, Uniswap quote/calldata preparation,
+  coordinator jobs, platform Agent execution, relayer flow, and metrics.
+- Product frontend with wallet connect, AI chat, intent templates, execution
+  history, Etherscan links, Agent Wallet controls, and performance dashboard.
+- Sepolia deployment notes and smoke-test flow in
+  [docs/sepolia-deployment.md](docs/sepolia-deployment.md).
+- Final project report in [report/final-report.md](report/final-report.md).
+- Product architecture and future upgrade plan in
+  [docs/product-architecture.md](docs/product-architecture.md).
+
 ## Current Scope
 
 The current implementation contains:
@@ -105,6 +119,18 @@ Current backend test suite:
 40 tests passing
 ```
 
+Current smart-contract test suite:
+
+```text
+23 tests passing
+```
+
+## Environment
+
+Copy `.env.example` to `.env` and fill in Sepolia RPC, deployer key, platform
+Agent key, contract addresses, AI provider key, and Uniswap API key as needed.
+Do not commit `.env`.
+
 ## Sepolia Deployment
 
 See [docs/sepolia-deployment.md](docs/sepolia-deployment.md).
@@ -135,10 +161,8 @@ Useful endpoints:
 - `POST /settlement/execute-batch-signed-calls`
 - `GET /metrics`
 
-## Report
+## Final Documentation
 
-The full project report is in:
-
-```text
-report/final-report.md
-```
+- [Final report](report/final-report.md)
+- [Product architecture](docs/product-architecture.md)
+- [Sepolia deployment guide](docs/sepolia-deployment.md)

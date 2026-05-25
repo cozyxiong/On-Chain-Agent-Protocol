@@ -1,17 +1,18 @@
-# AgentDEXAggregator Product Architecture and Execution Plan
+# AI-Powered On-Chain Agent Protocol Product Architecture and Execution Plan
 
 Version: final product architecture draft
 
 ## 1. Product Definition
 
-AgentDEXAggregator is a multi-user, multi-agent DEX intent aggregation system.
-It accepts trading intents from users and AI agents, validates them, stores them
-in a shared intent pool, internally matches compatible intents, routes the
-remaining volume to external DEX liquidity, and executes the final plan through
-smart accounts, ERC-4337 bundling, or direct fallback execution.
+AI-Powered On-Chain Agent Protocol is a multi-user, multi-agent intent execution
+system. It accepts intents from users and AI agents, validates them, stores them
+in a shared intent pool, optimizes compatible workflows, routes DeFi actions to
+external liquidity when needed, and executes the final plan through smart
+accounts, ERC-4337 bundling, or direct fallback execution.
 
-The product is not a generic intent protocol. Its product focus is DEX execution:
+The product focus is scalable on-chain agent execution:
 
+- transfer
 - swap
 - rebalance
 - DCA
@@ -35,7 +36,7 @@ The following ideas from the reviewed v2 document should be incorporated:
 - Freeze intermediate data contracts between matching, routing, settlement
   planning, and batch construction.
 - Include Exact Match and Partial Match in the first matching MVP. Exact-only
-  matching is too weak for a real DEX aggregator.
+  matching is too weak for a real intent optimization layer.
 - Separate optimization decisions from chain encoding:
   - Aggregator Engine decides the best execution plan.
   - Batch Builder encodes the executable package.
@@ -78,7 +79,7 @@ The following should not be part of the first product-grade implementation:
 - A large generic settlement contract before the off-chain plan format and
   matching behavior are proven.
 
-These are valuable later, but they should not block a clean AgentDEXAggregator
+These are valuable later, but they should not block a clean protocol
 MVP.
 
 ## 3. Final System Architecture
@@ -661,11 +662,11 @@ GET /metrics/execution
 
 ## 15. Execution Roadmap
 
-### Phase 1: Product Rename and Postgres Foundation
+### Phase 1: Product Naming and Postgres Foundation
 
 Deliverables:
 
-- Rename product docs/UI to AgentDEXAggregator.
+- Keep product docs/UI aligned with AI-Powered On-Chain Agent Protocol.
 - Add Supabase/Postgres schema.
 - Replace JSON stores for intents and coordinator jobs.
 - Add migration files.
