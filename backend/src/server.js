@@ -24,10 +24,12 @@ import {
 import { createWalletQueryService } from "./wallet/walletQueryService.js";
 import { createSettlementService } from "./settlement/settlementService.js";
 import { createAgentExecutor } from "./agent/agentExecutor.js";
+import { createSupabaseMirrorFromEnv } from "./storage/supabaseMirror.js";
 import http from "node:http";
 
 export function createBackendServer(options = {}) {
-  const store = options.store ?? createIntentStore();
+  const supabaseMirror = options.supabaseMirror ?? createSupabaseMirrorFromEnv();
+  const store = options.store ?? createIntentStore({ mirror: supabaseMirror });
   const batchSize = options.batchSize ?? 5;
   const intentParser = options.intentParser ?? createIntentParser(options.ai ?? {});
   const uniswap = options.uniswap ?? createUniswapService(options.uniswapOptions ?? {});
@@ -38,7 +40,9 @@ export function createBackendServer(options = {}) {
   const walletQueries = options.walletQueries ?? createWalletQueryService();
   const settlement = options.settlement ?? createSettlementService({ uniswap });
   const agentExecutor = options.agentExecutor ?? createAgentExecutor({ uniswap });
-  const coordinatorJobs = options.coordinatorJobs ?? createCoordinatorJobStore(options.coordinatorJobStore ?? {});
+  const coordinatorJobs =
+    options.coordinatorJobs ??
+    createCoordinatorJobStore({ ...(options.coordinatorJobStore ?? {}), mirror: supabaseMirror });
   const coordinatorWorker =
     options.coordinatorWorker ??
     createCoordinatorWorker({
@@ -68,7 +72,19 @@ export function createBackendServer(options = {}) {
         return sendJson(res, 200, {
           ok: true,
           service: "aap-agent-backend",
+          storage: {
+            supabase: supabaseMirror.enabled
+          },
           timestamp: new Date().toISOString()
+        });
+      }
+
+      if (req.method === "GET" && url.pathname === "/storage/status") {
+        return sendJson(res, 200, {
+          supabase: {
+            enabled: supabaseMirror.enabled,
+            url: process.env.SUPABASE_URL ? redactSupabaseUrl(process.env.SUPABASE_URL) : null
+          }
         });
       }
 
@@ -370,6 +386,15 @@ function setCorsHeaders(res) {
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, { "content-type": "application/json" });
   res.end(JSON.stringify(payload, null, 2));
+}
+
+function redactSupabaseUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.hostname}`;
+  } catch {
+    return "configured";
+  }
 }
 
 async function readJson(req) {

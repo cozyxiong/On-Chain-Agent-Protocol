@@ -1,4 +1,7 @@
-export function createIntentStore() {
+import { mirrorWrite } from "./supabaseMirror.js";
+
+export function createIntentStore(options = {}) {
+  const mirror = options.mirror;
   const intents = new Map();
   const batches = new Map();
 
@@ -11,6 +14,7 @@ export function createIntentStore() {
       }
 
       intents.set(intent.intentId, structuredClone(intent));
+      mirrorWrite(mirror?.recordIntent(intent));
       return structuredClone(intent);
     },
 
@@ -32,6 +36,7 @@ export function createIntentStore() {
         updatedAt: new Date().toISOString()
       };
       intents.set(intentId, updated);
+      mirrorWrite(mirror?.recordIntent(updated));
       return structuredClone(updated);
     },
 
@@ -52,16 +57,19 @@ export function createIntentStore() {
       for (const intentId of created.intentIds) {
         const intent = intents.get(intentId);
         if (intent?.status === "QUEUED") {
-          intents.set(intentId, {
+          const updatedIntent = {
             ...intent,
             status: "BATCHED",
             batchId: created.batchId,
             updatedAt: new Date().toISOString()
-          });
+          };
+          intents.set(intentId, updatedIntent);
+          mirrorWrite(mirror?.recordIntent(updatedIntent));
         }
       }
 
       batches.set(created.batchId, created);
+      mirrorWrite(mirror?.recordBatch(created));
       return structuredClone(created);
     },
 
@@ -90,18 +98,21 @@ export function createIntentStore() {
       for (const intentId of batch.intentIds) {
         const intent = intents.get(intentId);
         if (intent) {
-          intents.set(intentId, {
+          const updatedIntent = {
             ...intent,
             status: "EXECUTED",
             txHash: updatedBatch.txHash,
             gasUsed: Math.floor(updatedBatch.gasUsed / batch.intentIds.length),
             updatedAt: now,
             executedAt: now
-          });
+          };
+          intents.set(intentId, updatedIntent);
+          mirrorWrite(mirror?.recordIntent(updatedIntent));
         }
       }
 
       batches.set(batchId, updatedBatch);
+      mirrorWrite(mirror?.recordBatch(updatedBatch));
       return structuredClone(updatedBatch);
     },
 
@@ -125,6 +136,7 @@ export function createIntentStore() {
       };
 
       intents.set(updated.intentId, updated);
+      mirrorWrite(mirror?.recordIntent(updated));
       return structuredClone(updated);
     }
   };

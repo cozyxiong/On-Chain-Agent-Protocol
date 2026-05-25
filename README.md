@@ -9,6 +9,8 @@ on-chain agents.
   authorization, signed scheduled settlement, and batched execution.
 - Node.js backend for AI intent parsing, Uniswap quote/calldata preparation,
   coordinator jobs, platform Agent execution, relayer flow, and metrics.
+- Optional Supabase/Postgres persistence for intents, batches, and coordinator
+  jobs.
 - Product frontend with wallet connect, AI chat, intent templates, execution
   history, Etherscan links, Agent Wallet controls, and performance dashboard.
 - Sepolia deployment notes and smoke-test flow in
@@ -43,6 +45,7 @@ The current implementation contains:
   workflows without additional Owner signatures.
 - Coordinator job storage, due-time scanning, retries, receipt tracking, signed
   call batching, and scheduled Agent Wallet batching.
+- Supabase mirror storage for deployment-grade history and metrics durability.
 
 ## Execution Modes
 
@@ -131,6 +134,17 @@ Copy `.env.example` to `.env` and fill in Sepolia RPC, deployer key, platform
 Agent key, contract addresses, AI provider key, and Uniswap API key as needed.
 Do not commit `.env`.
 
+For Supabase persistence, set:
+
+```text
+SUPABASE_URL=https://zjiagymfpemkdnvdiibc.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+The backend writes to `aap_intents`, `aap_batches`, and
+`aap_coordinator_jobs`. These tables have RLS enabled and are intended for
+server-side `service_role` access only.
+
 ## Sepolia Deployment
 
 See [docs/sepolia-deployment.md](docs/sepolia-deployment.md).
@@ -166,3 +180,13 @@ Useful endpoints:
 - [Final report](report/final-report.md)
 - [Product architecture](docs/product-architecture.md)
 - [Sepolia deployment guide](docs/sepolia-deployment.md)
+
+## Supabase
+
+The Supabase schema is stored in:
+
+```text
+supabase/migrations/202605250001_aap_storage.sql
+```
+
+It has been applied to project `zjiagymfpemkdnvdiibc`.

@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { mirrorWrite } from "../storage/supabaseMirror.js";
 
 const DEFAULT_PATH = path.resolve(process.cwd(), "data/coordinator-jobs.json");
 
 export function createCoordinatorJobStore(options = {}) {
   const filePath = options.filePath ?? DEFAULT_PATH;
+  const mirror = options.mirror;
   let jobs = loadJobs(filePath);
 
   function persist() {
@@ -44,6 +46,7 @@ export function createCoordinatorJobStore(options = {}) {
         created.push(structuredClone(createdJob));
       }
       persist();
+      mirrorWrite(mirror?.recordJobs(created));
       return created;
     },
 
@@ -66,6 +69,7 @@ export function createCoordinatorJobStore(options = {}) {
       };
       jobs.set(jobId, updated);
       persist();
+      mirrorWrite(mirror?.recordJob(updated));
       return structuredClone(updated);
     },
 
