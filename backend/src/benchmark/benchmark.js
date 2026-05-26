@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildBatches } from "../coordinator/batcher.js";
 import { computeMetrics } from "../metrics/metrics.js";
+import { runFoundryGasBenchmark } from "./foundryGasBenchmark.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outputPath = path.resolve(__dirname, "../../../report/benchmark-results.json");
@@ -16,6 +17,19 @@ const config = {
 };
 
 const result = runBenchmark(config);
+try {
+  result.actualGas = await runFoundryGasBenchmark();
+  result.summary.actualNonBatchedGas = result.actualGas.summary.nonBatchedGas;
+  result.summary.actualBatchedGas = result.actualGas.summary.batchedGas;
+  result.summary.actualGasSaved = result.actualGas.summary.gasSaved;
+  result.summary.actualGasSavedPercent = result.actualGas.summary.gasSavedPercent;
+  result.summary.actualTxReductionPercent = result.actualGas.summary.txReductionPercent;
+} catch (error) {
+  result.actualGas = {
+    source: "foundry-local-evm",
+    error: error.message
+  };
+}
 await fs.mkdir(path.dirname(outputPath), { recursive: true });
 await fs.writeFile(outputPath, `${JSON.stringify(result, null, 2)}\n`);
 console.log(JSON.stringify(result.summary, null, 2));

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-26T13:09:41.620Z",
+  "generatedAt": "2026-05-26T13:58:05.725Z",
   "config": {
     "intentCount": 40,
     "batchSize": 5,
@@ -20,7 +20,12 @@
     "nonBatchedAverageLatencyMs": 20500,
     "batchedAverageLatencyMs": 9000,
     "nonBatchedThroughputIntentsPerTx": 1,
-    "batchedThroughputIntentsPerTx": 5
+    "batchedThroughputIntentsPerTx": 5,
+    "actualNonBatchedGas": 240226,
+    "actualBatchedGas": 160922,
+    "actualGasSaved": 79304,
+    "actualGasSavedPercent": 33.01,
+    "actualTxReductionPercent": 80
   },
   "nonBatched": {
     "txCount": 40,
@@ -1309,6 +1314,40 @@
         "estimatedGasSavedPercent": 0,
         "batchTransactions": []
       }
+    }
+  },
+  "actualGas": {
+    "source": "foundry-local-evm",
+    "command": "/Users/mengziqi/.foundry/bin/forge test --match-contract AgentGasBenchmarkTest --json",
+    "generatedAt": "2026-05-26T13:58:05.822Z",
+    "intentCount": 5,
+    "nonBatched": {
+      "name": "non-batched-agent-transfers",
+      "intentCount": 5,
+      "txCount": 5,
+      "executionGas": 135226,
+      "txEnvelopeGas": 105000,
+      "totalGas": 240226
+    },
+    "batched": {
+      "name": "batched-agent-transfers",
+      "intentCount": 5,
+      "txCount": 1,
+      "executionGas": 139922,
+      "txEnvelopeGas": 21000,
+      "totalGas": 160922
+    },
+    "summary": {
+      "intentCount": 5,
+      "nonBatchedTxCount": 5,
+      "batchedTxCount": 1,
+      "nonBatchedGas": 240226,
+      "batchedGas": 160922,
+      "gasSaved": 79304,
+      "gasSavedPercent": 33.01,
+      "txReductionPercent": 80,
+      "nonBatchedThroughputIntentsPerTx": 1,
+      "batchedThroughputIntentsPerTx": 5
     }
   }
 }

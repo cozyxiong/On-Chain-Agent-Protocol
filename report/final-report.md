@@ -391,6 +391,28 @@ Result:
 - Estimated gas reduced by 46.75%.
 - Throughput increased to 5 intents per transaction.
 
+The project also includes a Foundry local-EVM gas benchmark that measures the
+actual execution path of five authorized `AgentSmartAccount` ERC20 transfer
+intents. The benchmark excludes setup/deployment/auth costs and then adds the
+standard 21,000 gas transaction envelope per submitted transaction.
+
+Actual local-EVM gas benchmark:
+
+| Metric | Non-batched | Batched |
+|---|---:|---:|
+| Intent count | 5 | 5 |
+| Transaction count | 5 | 1 |
+| Measured execution gas | 135,226 | 139,922 |
+| Transaction envelope gas | 105,000 | 21,000 |
+| Total comparable gas | 240,226 | 160,922 |
+| Throughput | 1 intent/tx | 5 intents/tx |
+
+Actual result:
+
+- Transaction count reduced by 80%.
+- Comparable local-EVM gas reduced by 33.01%.
+- Gas saved for the five-intent workload: 79,304 gas.
+
 The detailed benchmark output is stored in:
 
 ```text
