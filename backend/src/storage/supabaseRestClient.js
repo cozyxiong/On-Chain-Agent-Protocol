@@ -43,6 +43,13 @@ export function createSupabaseRestClient(options = {}) {
 
     select(table, query = "") {
       return request(`/${table}${query}`);
+    },
+
+    rpc(name, body = {}) {
+      return request(`/rpc/${name}`, {
+        method: "POST",
+        body
+      });
     }
   };
 }

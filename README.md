@@ -9,8 +9,8 @@ on-chain agents.
   authorization, signed scheduled settlement, and batched execution.
 - Node.js backend for AI intent parsing, Uniswap quote/calldata preparation,
   coordinator jobs, platform Agent execution, relayer flow, and metrics.
-- Optional Supabase/Postgres persistence for intents, batches, and coordinator
-  jobs.
+- Optional Supabase/Postgres persistence for intents and batches, plus primary
+  Supabase/Postgres coordinator job storage when configured.
 - Product frontend with wallet connect, AI chat, intent templates, execution
   history, Etherscan links, Agent Wallet controls, and performance dashboard.
 - Sepolia deployment notes and smoke-test flow in
@@ -44,8 +44,12 @@ The current implementation contains:
   demo Agent signer executes transfer, swap, rebalance, scheduled, and batch
   workflows without additional Owner signatures.
 - Coordinator job storage, due-time scanning, retries, receipt tracking, signed
-  call batching, and scheduled Agent Wallet batching.
-- Supabase mirror storage for deployment-grade history and metrics durability.
+  call batching, and scheduled Agent Wallet batching. When Supabase credentials
+  are configured, coordinator jobs are stored and claimed in Postgres; otherwise
+  the backend uses the local JSON store for development.
+- Supabase mirror storage for intent/batch history and metrics durability.
+  Coordinator job claiming uses a Postgres RPC with `FOR UPDATE SKIP LOCKED` so
+  concurrent workers do not execute the same due job.
 
 ## Execution Modes
 
@@ -119,13 +123,13 @@ Dashboard defaults to `http://localhost:5173`.
 Current backend test suite:
 
 ```text
-40 tests passing
+55 tests passing
 ```
 
 Current smart-contract test suite:
 
 ```text
-23 tests passing
+27 tests passing
 ```
 
 ## Environment

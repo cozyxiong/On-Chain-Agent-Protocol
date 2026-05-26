@@ -49,3 +49,32 @@ test("mirrors intents, batches, and coordinator jobs to Supabase tables", async 
   assert.equal(writes[2].table, "aap_coordinator_jobs");
   assert.equal(writes[2].rows.job_id, "job-1");
 });
+
+test("Supabase REST client exposes rpc calls", async () => {
+  const calls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    return {
+      ok: true,
+      async text() {
+        return JSON.stringify([{ ok: true }]);
+      }
+    };
+  };
+
+  try {
+    const { createSupabaseRestClient } = await import("../src/storage/supabaseRestClient.js");
+    const client = createSupabaseRestClient({
+      url: "https://example.supabase.co",
+      serviceRoleKey: "service-role-key"
+    });
+    const result = await client.rpc("aap_claim_due_coordinator_jobs", { p_limit: 1 });
+
+    assert.deepEqual(result, [{ ok: true }]);
+    assert.equal(calls[0].url, "https://example.supabase.co/rest/v1/rpc/aap_claim_due_coordinator_jobs");
+    assert.equal(calls[0].options.method, "POST");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

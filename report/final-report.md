@@ -245,7 +245,11 @@ The backend coordinator worker is responsible for asynchronous execution.
 
 Implemented behavior:
 
-- Stores coordinator jobs in JSON-backed persistent storage.
+- Stores coordinator jobs in Supabase/Postgres as the primary store when
+  configured, with the JSON store kept as a local development fallback.
+- Claims due coordinator jobs through the `aap_claim_due_coordinator_jobs`
+  Postgres RPC, which uses `FOR UPDATE SKIP LOCKED` to avoid duplicate execution
+  when multiple workers poll concurrently.
 - Scans due jobs on an interval.
 - Groups jobs by `batchGroupId`.
 - Executes one due job with `executeSignedCall`.
@@ -507,7 +511,7 @@ npm test
 Current result:
 
 ```text
-40 tests passing
+55 tests passing
 ```
 
 Covered behavior:
@@ -608,7 +612,9 @@ Implemented controls:
 Remaining risks:
 
 - Coordinator/relayer is currently centralized.
-- JSON file storage is suitable for prototype/demo, not high-scale production.
+- Intent, batch, and aggregation-plan records still use the local store with
+  Supabase mirroring. Coordinator jobs can use Supabase/Postgres as the primary
+  store, but a full all-table source-of-truth migration remains future work.
 - Uniswap execution depends on API availability and testnet liquidity.
 - The demo backend can hold an Agent private key for simulation. Production
   deployments should move signing into an external agent runtime, KMS/HSM,
@@ -671,7 +677,8 @@ npm run benchmark
 
 ## 20. Future Work
 
-- Replace JSON job storage with Postgres or another production database.
+- Complete Supabase/Postgres source-of-truth migration for intents, batches, and
+  aggregation plans.
 - Add decentralized relayer or solver competition.
 - Integrate a production ERC-4337 bundler and paymaster.
 - Support multiple independent Agent nodes submitting intents concurrently.

@@ -27,12 +27,12 @@ export function createCoordinatorWorker(options) {
   }
 
   async function confirmPendingReceipts(summary) {
-    for (const job of store.pendingReceiptJobs()) {
+    for (const job of await store.pendingReceiptJobs()) {
       const receipt = await getReceipt(job.txHash);
       if (!receipt) continue;
 
       const status = receipt.status === "0x1" ? "SUCCESS" : "FAILED";
-      store.updateJob(job.jobId, {
+      await store.updateJob(job.jobId, {
         status,
         receipt: summarizeReceipt(receipt),
         confirmedAt: new Date().toISOString()
@@ -43,7 +43,7 @@ export function createCoordinatorWorker(options) {
   }
 
   async function executeDueJobs(summary) {
-    const due = store.dueJobs(new Date(Date.now() - dueGraceMs));
+    const due = await store.dueJobs(new Date(Date.now() - dueGraceMs));
     const groups = groupBy(due, (job) => job.batchGroupId ?? job.jobId);
 
     for (const jobs of groups.values()) {
@@ -106,9 +106,9 @@ export function createCoordinatorWorker(options) {
 
   async function executeJobSet(executable, summary, execute) {
     for (const job of executable) {
-      store.updateJob(job.jobId, {
+      await store.updateJob(job.jobId, {
         status: "EXECUTING",
-        attempts: job.attempts + 1,
+        attempts: job.status === "EXECUTING" ? job.attempts : job.attempts + 1,
         lastAttemptAt: new Date().toISOString()
       });
     }
@@ -116,7 +116,7 @@ export function createCoordinatorWorker(options) {
     try {
       const result = await execute();
       for (const job of executable) {
-        store.updateJob(job.jobId, {
+        await store.updateJob(job.jobId, {
           status: "SUBMITTED",
           txHash: result.primaryTxHash,
           submittedAt: new Date().toISOString(),
@@ -132,8 +132,8 @@ export function createCoordinatorWorker(options) {
 
   async function failJobSet(executable, summary, error) {
     for (const job of executable) {
-      const attempts = job.attempts + 1;
-      store.updateJob(job.jobId, {
+      const attempts = job.status === "EXECUTING" ? job.attempts : job.attempts + 1;
+      await store.updateJob(job.jobId, {
         status: attempts >= job.maxAttempts ? "FAILED" : "RETRY",
         attempts,
         error: error.message

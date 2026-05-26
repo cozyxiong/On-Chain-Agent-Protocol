@@ -16,6 +16,8 @@ export function createCoordinatorJobStore(options = {}) {
   }
 
   return {
+    storageKind: "local-json",
+
     createJobs(inputJobs) {
       const created = [];
       for (const job of inputJobs) {

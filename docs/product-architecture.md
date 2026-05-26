@@ -668,15 +668,18 @@ Deliverables:
 
 - Keep product docs/UI aligned with AI-Powered On-Chain Agent Protocol.
 - Add Supabase/Postgres schema.
-- Replace JSON stores for intents and coordinator jobs.
+- Use Supabase/Postgres as the coordinator job source of truth, while keeping
+  the local JSON store as a development fallback.
+- Complete the remaining source-of-truth migration for intents and execution
+  plans.
 - Add migration files.
-- Add `SKIP LOCKED` validation worker.
+- Add `SKIP LOCKED` worker claiming for due coordinator jobs.
 - Add Realtime notification triggers.
 
 Acceptance:
 
-- Intents persist in Postgres.
-- Multiple validation workers do not double-process the same intent.
+- Coordinator jobs persist in Postgres when Supabase is configured.
+- Multiple coordinator workers do not double-process the same due job.
 - Frontend status updates from API and Realtime.
 
 ### Phase 2: Validation Layer

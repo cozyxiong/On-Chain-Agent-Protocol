@@ -3,6 +3,7 @@ import { createExecutionPlanStore } from "./storage/planStore.js";
 import { validateIntentInput } from "./intents/schema.js";
 import { buildBatches } from "./coordinator/batcher.js";
 import { createCoordinatorJobStore } from "./coordinator/jobStore.js";
+import { createSupabaseCoordinatorJobStoreFromEnv } from "./coordinator/supabaseJobStore.js";
 import { createCoordinatorWorker } from "./coordinator/worker.js";
 import { computeMetrics } from "./metrics/metrics.js";
 import { createAggregationPlan } from "./aggregator/matcher.js";
@@ -45,6 +46,7 @@ export function createBackendServer(options = {}) {
   const agentExecutor = options.agentExecutor ?? createAgentExecutor({ uniswap });
   const coordinatorJobs =
     options.coordinatorJobs ??
+    createSupabaseCoordinatorJobStoreFromEnv() ??
     createCoordinatorJobStore({ ...(options.coordinatorJobStore ?? {}), mirror: supabaseMirror });
   const coordinatorWorker =
     options.coordinatorWorker ??
@@ -76,7 +78,8 @@ export function createBackendServer(options = {}) {
           ok: true,
           service: "aap-agent-backend",
           storage: {
-            supabase: supabaseMirror.enabled
+            supabase: supabaseMirror.enabled,
+            coordinatorJobs: coordinatorJobs.storageKind ?? "local-json"
           },
           timestamp: new Date().toISOString()
         });
@@ -178,18 +181,18 @@ export function createBackendServer(options = {}) {
       }
 
       if (req.method === "GET" && url.pathname === "/coordinator/jobs") {
-        return sendJson(res, 200, { jobs: coordinatorJobs.listJobs() });
+        return sendJson(res, 200, { jobs: await coordinatorJobs.listJobs() });
       }
 
       if (req.method === "POST" && url.pathname === "/coordinator/jobs") {
         const body = await readJson(req);
-        const jobs = coordinatorJobs.createJobs(body.jobs ?? [body]);
+        const jobs = await coordinatorJobs.createJobs(body.jobs ?? [body]);
         return sendJson(res, 201, { jobs });
       }
 
       if (req.method === "POST" && url.pathname === "/coordinator/tick") {
         const summary = await coordinatorWorker.tick();
-        return sendJson(res, 200, { summary, jobs: coordinatorJobs.listJobs() });
+        return sendJson(res, 200, { summary, jobs: await coordinatorJobs.listJobs() });
       }
 
       if (req.method === "GET" && url.pathname === "/scheduler/due") {
@@ -344,7 +347,7 @@ export function createBackendServer(options = {}) {
           metrics: computeMetrics(
             store.listIntents(),
             store.listBatches(),
-            coordinatorJobs.listJobs(),
+            await coordinatorJobs.listJobs(),
             planStore.listPlans()
           )
         });

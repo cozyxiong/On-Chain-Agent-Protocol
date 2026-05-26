@@ -47,3 +47,48 @@ create index if not exists aap_coordinator_jobs_batch_group_idx on public.aap_co
 alter table public.aap_intents enable row level security;
 alter table public.aap_batches enable row level security;
 alter table public.aap_coordinator_jobs enable row level security;
+
+-- Atomically claim due coordinator jobs for worker processes.
+-- SKIP LOCKED lets several workers poll concurrently without double-executing
+-- the same job; locked rows are ignored and can be picked by the process that
+-- already claimed them.
+create or replace function public.aap_claim_due_coordinator_jobs(
+  p_now timestamptz,
+  p_limit int default 50
+)
+returns setof public.aap_coordinator_jobs
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return query
+  with claimed as (
+    select job_id
+    from public.aap_coordinator_jobs
+    where status in ('QUEUED', 'RETRY')
+      and run_at <= p_now
+    order by run_at asc, created_at asc
+    limit p_limit
+    for update skip locked
+  ),
+  updated as (
+    update public.aap_coordinator_jobs job
+    set
+      status = 'EXECUTING',
+      attempts = job.attempts + 1,
+      updated_at = now(),
+      data = jsonb_set(
+        jsonb_set(
+          jsonb_set(job.data, '{status}', to_jsonb('EXECUTING'::text), true),
+          '{attempts}', to_jsonb(job.attempts + 1), true
+        ),
+        '{lastAttemptAt}', to_jsonb(now()), true
+      )
+    from claimed
+    where job.job_id = claimed.job_id
+    returning job.*
+  )
+  select * from updated;
+end;
+$$;
