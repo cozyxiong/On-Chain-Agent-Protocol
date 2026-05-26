@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-11T04:19:03.933Z",
+  "generatedAt": "2026-05-26T13:09:41.620Z",
   "config": {
     "intentCount": 40,
     "batchSize": 5,
@@ -560,7 +560,26 @@
       "totalGasUsed": 3080000,
       "averageGasPerIntent": 77000,
       "estimatedNonBatchedGas": 3080000,
-      "estimatedBatchGas": 0
+      "estimatedBatchGas": 0,
+      "coordinator": {
+        "totalJobs": 0,
+        "queuedJobs": 0,
+        "retryJobs": 0,
+        "executingJobs": 0,
+        "submittedJobs": 0,
+        "successfulJobs": 0,
+        "failedJobs": 0,
+        "failureRate": 0,
+        "totalBatchTransactions": 0,
+        "averageBatchSize": 0,
+        "throughputPerMinute": 0,
+        "averageLatencyMs": 0,
+        "estimatedNonBatchedGas": 0,
+        "actualBatchGas": 0,
+        "estimatedGasSaved": 0,
+        "estimatedGasSavedPercent": 0,
+        "batchTransactions": []
+      }
     }
   },
   "batched": {
@@ -1270,7 +1289,26 @@
       "totalGasUsed": 1640000,
       "averageGasPerIntent": 41000,
       "estimatedNonBatchedGas": 3080000,
-      "estimatedBatchGas": 1640000
+      "estimatedBatchGas": 1640000,
+      "coordinator": {
+        "totalJobs": 0,
+        "queuedJobs": 0,
+        "retryJobs": 0,
+        "executingJobs": 0,
+        "submittedJobs": 0,
+        "successfulJobs": 0,
+        "failedJobs": 0,
+        "failureRate": 0,
+        "totalBatchTransactions": 0,
+        "averageBatchSize": 0,
+        "throughputPerMinute": 0,
+        "averageLatencyMs": 0,
+        "estimatedNonBatchedGas": 0,
+        "actualBatchGas": 0,
+        "estimatedGasSaved": 0,
+        "estimatedGasSavedPercent": 0,
+        "batchTransactions": []
+      }
     }
   }
 }
