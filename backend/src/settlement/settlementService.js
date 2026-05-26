@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { execFile } from "node:child_process";
 import { resolveToken, toBaseUnits } from "../tokens/tokenRegistry.js";
 import { createUniswapService } from "../uniswap/uniswapService.js";
+import { keccak256Hex } from "../crypto/keccak.js";
 
 const SEPOLIA_CHAIN_ID = 11155111;
 
@@ -325,10 +326,6 @@ function describeIntent(intent) {
     return `Transfer ${intent.amount} ${intent.token} to ${intent.recipient}`;
   }
   return `Swap ${intent.amountIn} ${intent.tokenIn} to ${intent.tokenOut}`;
-}
-
-function keccak256Hex() {
-  return `0x${"0".repeat(64)}`;
 }
 
 function randomBytes32() {
