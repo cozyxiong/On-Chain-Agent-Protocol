@@ -25,11 +25,17 @@ contract IntentManager {
         uint256 updatedAt;
     }
 
+    struct DailyUsage {
+        uint256 day;
+        uint256 spent;
+    }
+
     AgentRegistry public immutable registry;
     address public owner;
     address public coordinator;
 
     mapping(bytes32 => IntentRecord) private intents;
+    mapping(bytes32 => DailyUsage) private dailyUsage;
 
     event IntentCreated(
         bytes32 indexed intentId,
@@ -41,6 +47,7 @@ contract IntentManager {
     );
     event IntentStatusChanged(bytes32 indexed intentId, IntentStatus status);
     event CoordinatorUpdated(address indexed coordinator);
+    event AgentDailyUsageRecorded(bytes32 indexed agentId, uint256 indexed day, uint256 spent);
 
     error NotOwner();
     error NotCoordinator();
@@ -48,6 +55,7 @@ contract IntentManager {
     error IntentNotFound();
     error InvalidStatus();
     error UnauthorizedAgent();
+    error DailyLimitExceeded();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -80,6 +88,7 @@ contract IntentManager {
         if (intents[intentId].status != IntentStatus.None) revert IntentAlreadyExists();
         if (!registry.isRegisteredAgent(agentId, msg.sender)) revert UnauthorizedAgent();
         registry.canExecute(agentId, intentType, amount);
+        _consumeDailyLimit(agentId, amount);
 
         intents[intentId] = IntentRecord({
             agentId: agentId,
@@ -135,9 +144,37 @@ contract IntentManager {
         return intents[intentId].status;
     }
 
+    function getDailyUsage(bytes32 agentId) external view returns (DailyUsage memory) {
+        return dailyUsage[agentId];
+    }
+
     function _setStatus(bytes32 intentId, IntentStatus status) private {
         intents[intentId].status = status;
         intents[intentId].updatedAt = block.timestamp;
         emit IntentStatusChanged(intentId, status);
+    }
+
+    function _consumeDailyLimit(bytes32 agentId, uint256 amount) private {
+        AgentRegistry.AgentPolicy memory policy = registry.getPolicy(agentId);
+        if (policy.dailyLimit == 0) {
+            return;
+        }
+
+        uint256 currentDay = block.timestamp / 1 days;
+        DailyUsage storage usage = dailyUsage[agentId];
+
+        // Daily limits reset on UTC-style chain days. This keeps enforcement
+        // deterministic and avoids depending on off-chain timezone logic.
+        if (usage.day != currentDay) {
+            usage.day = currentDay;
+            usage.spent = 0;
+        }
+
+        if (usage.spent > policy.dailyLimit || amount > policy.dailyLimit - usage.spent) {
+            revert DailyLimitExceeded();
+        }
+
+        usage.spent += amount;
+        emit AgentDailyUsageRecorded(agentId, currentDay, usage.spent);
     }
 }
