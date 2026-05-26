@@ -28,6 +28,7 @@ test("computes execution and gas metrics", () => {
   assert.equal(metrics.averageLatencyMs, 1000);
   assert.equal(metrics.averageGasPerIntent, 32000);
   assert.equal(metrics.coordinator.totalJobs, 0);
+  assert.equal(metrics.aggregation.totalPlans, 0);
 });
 
 test("computes coordinator batching metrics from signed jobs", () => {
@@ -72,4 +73,40 @@ test("computes coordinator batching metrics from signed jobs", () => {
   assert.equal(metrics.actualBatchGas, 200000);
   assert.equal(metrics.estimatedNonBatchedGas, 240000);
   assert.equal(metrics.estimatedGasSaved, 40000);
+});
+
+test("computes aggregation metrics from execution plans", () => {
+  const metrics = computeMetrics(
+    [],
+    [],
+    [],
+    [
+      {
+        planId: "older",
+        planType: "external-route",
+        matchRate: 0,
+        matchedPairs: [],
+        matchedVolumeUsd: 0,
+        externalRoutedVolumeUsd: 30,
+        createdAt: "2026-01-01T00:00:00.000Z"
+      },
+      {
+        planId: "latest",
+        planType: "hybrid-match-route",
+        matchRate: 0.5,
+        matchedPairs: [{ type: "partial" }],
+        matchedVolumeUsd: 30,
+        externalRoutedVolumeUsd: 30,
+        createdAt: "2026-01-01T00:01:00.000Z"
+      }
+    ]
+  ).aggregation;
+
+  assert.equal(metrics.totalPlans, 2);
+  assert.equal(metrics.latestPlanId, "latest");
+  assert.equal(metrics.latestPlanType, "hybrid-match-route");
+  assert.equal(metrics.latestMatchRate, 0.5);
+  assert.equal(metrics.latestMatchedPairs, 1);
+  assert.equal(metrics.totalMatchedVolumeUsd, 30);
+  assert.equal(metrics.totalExternalRoutedVolumeUsd, 60);
 });

@@ -1,4 +1,4 @@
-export function computeMetrics(intents, batches, coordinatorJobs = []) {
+export function computeMetrics(intents, batches, coordinatorJobs = [], executionPlans = []) {
   const executed = intents.filter((intent) => intent.status === "EXECUTED");
   const failed = intents.filter((intent) => intent.status === "FAILED");
   const latencies = executed
@@ -20,7 +20,36 @@ export function computeMetrics(intents, batches, coordinatorJobs = []) {
     averageGasPerIntent: average(gasValues),
     estimatedNonBatchedGas: intents.length * 77_000,
     estimatedBatchGas: batches.reduce((sum, batch) => sum + 45_000 + batch.size * 32_000, 0),
-    coordinator: computeCoordinatorMetrics(coordinatorJobs)
+    coordinator: computeCoordinatorMetrics(coordinatorJobs),
+    aggregation: computeAggregationMetrics(executionPlans)
+  };
+}
+
+export function computeAggregationMetrics(plans) {
+  const latestPlan = [...plans].sort(
+    (a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
+  )[0];
+  const totals = plans.reduce(
+    (sum, plan) => ({
+      matchedPairs: sum.matchedPairs + Number(plan.matchedPairs?.length ?? 0),
+      matchedVolumeUsd: sum.matchedVolumeUsd + Number(plan.matchedVolumeUsd ?? 0),
+      externalRoutedVolumeUsd:
+        sum.externalRoutedVolumeUsd + Number(plan.externalRoutedVolumeUsd ?? 0)
+    }),
+    { matchedPairs: 0, matchedVolumeUsd: 0, externalRoutedVolumeUsd: 0 }
+  );
+
+  return {
+    totalPlans: plans.length,
+    latestPlanId: latestPlan?.planId ?? null,
+    latestPlanType: latestPlan?.planType ?? null,
+    latestMatchRate: Number(latestPlan?.matchRate ?? 0),
+    latestMatchedPairs: Number(latestPlan?.matchedPairs?.length ?? 0),
+    latestMatchedVolumeUsd: Number(latestPlan?.matchedVolumeUsd ?? 0),
+    latestExternalRoutedVolumeUsd: Number(latestPlan?.externalRoutedVolumeUsd ?? 0),
+    totalMatchedPairs: totals.matchedPairs,
+    totalMatchedVolumeUsd: totals.matchedVolumeUsd,
+    totalExternalRoutedVolumeUsd: totals.externalRoutedVolumeUsd
   };
 }
 

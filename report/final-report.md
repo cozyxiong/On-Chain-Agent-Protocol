@@ -304,7 +304,27 @@ Example Sepolia gas estimates after the fix:
 This path is the strongest live gas-saving demonstration in the current product
 because a single authorized Agent transaction carries multiple user intents.
 
-## 10. Uniswap Integration
+## 10. Aggregation Planner
+
+The backend now includes an execution-plan layer for ETH/USDC swap intents.
+`POST /plans/build` reads queued swap intents from the intent pool, runs exact
+and partial ETH/USDC matching, stores the resulting execution plan, and exposes
+it through `GET /plans` and `GET /metrics`.
+
+The planner output includes:
+
+- `planType`, such as `internal-match`, `partial-match`, or
+  `hybrid-match-route`.
+- matched intent pairs and internal transfer legs.
+- residual unmatched volume that should be routed externally through Uniswap.
+- match rate, matched volume, and external routed volume.
+
+This gives the product a concrete intent aggregation layer before calldata
+encoding. The current implementation plans internal matching off-chain; future
+work should connect the matched transfer legs to a dedicated settlement
+contract.
+
+## 11. Uniswap Integration
 
 Swap and spot buy/sell intents use the backend Uniswap service. It:
 
@@ -320,7 +340,7 @@ Supported Sepolia token registry:
 - USDC
 - Custom ERC20 address input
 
-## 11. Frontend Product
+## 12. Frontend Product
 
 The frontend is a product-style agent console instead of a local testing module.
 
@@ -332,11 +352,11 @@ Main modules:
 - Preview: shows parsed JSON without sending.
 - Send: signs or submits execution.
 - Recent Results: shows status and clickable Etherscan tx hashes.
-- Performance Dashboard: shows live coordinator metrics.
+- Performance Dashboard: shows live coordinator and aggregation metrics.
 
 The product uses wallet signing instead of private-key entry in the frontend.
 
-## 12. Performance Dashboard
+## 13. Performance Dashboard
 
 The dashboard reports both historical benchmark results and live coordinator
 execution metrics.
@@ -354,6 +374,8 @@ Live metrics include:
 - Actual batch gas from receipts.
 - Estimated gas saved.
 - Recent batch transactions.
+- Latest aggregation match rate.
+- Matched volume and external routed volume.
 
 The dashboard combines:
 
@@ -362,6 +384,8 @@ The dashboard combines:
 - Local immediate `agent-batch-execute` records from the frontend history, so
   live smart-account batch executions contribute to gas-saved and throughput
   metrics.
+- Stored execution plans from `/plans/build` and `/batches/build`, so intent
+  matching contributes to dashboard aggregation metrics.
 
 Benchmark configuration:
 
@@ -419,7 +443,7 @@ The detailed benchmark output is stored in:
 report/benchmark-results.json
 ```
 
-## 13. Sepolia Deployment
+## 14. Sepolia Deployment
 
 Current Sepolia deployment:
 
@@ -449,7 +473,7 @@ The full current deployment config is stored in:
 deployments/sepolia.json
 ```
 
-## 14. Testing
+## 15. Testing
 
 ### Solidity Tests
 
@@ -531,7 +555,7 @@ The frontend was checked for:
 - Performance Dashboard visibility.
 - Recent Results table.
 
-## 15. API Surface
+## 16. API Surface
 
 Important backend endpoints:
 
@@ -545,6 +569,9 @@ Important backend endpoints:
 | `GET /agent/status` | Return configured backend Agent signer address |
 | `POST /agent/execute-intent` | Backend Agent executes one authorized intent |
 | `POST /agent/execute-batch-intents` | Backend Agent executes multiple intents in one smart-account batch |
+| `GET /plans` | List stored aggregation execution plans |
+| `POST /plans/build` | Build and store an ETH/USDC exact or partial matching plan |
+| `POST /aggregator/plan` | Preview an aggregation plan without storing it |
 | `POST /settlement/prepare-scheduled-workflow` | Prepare EIP-712 signed scheduled calls |
 | `POST /settlement/execute-signed-call` | Relayer executes one signed call |
 | `POST /settlement/execute-batch-signed-calls` | Relayer executes batched signed calls |
@@ -557,7 +584,7 @@ Important backend endpoints:
 | `POST /rebalance/plan` | Build rebalance plan |
 | `POST /uniswap/quote` | Get Uniswap quote |
 
-## 16. Security Analysis
+## 17. Security Analysis
 
 Implemented controls:
 
@@ -590,7 +617,7 @@ Remaining risks:
   upgraded.
 - Real production ERC-4337 bundler/paymaster integration is not fully automated.
 
-## 17. Decentralization, Efficiency, and Trust Trade-offs
+## 18. Decentralization, Efficiency, and Trust Trade-offs
 
 Batching improves efficiency, but introduces coordination decisions:
 
@@ -605,7 +632,7 @@ The current design chooses a practical product path: AI for interpretation,
 wallet signatures for authorization, smart contracts for enforcement, and the
 coordinator for scalable asynchronous execution.
 
-## 18. How to Run
+## 19. How to Run
 
 Contracts:
 
@@ -642,7 +669,7 @@ cd backend
 npm run benchmark
 ```
 
-## 19. Future Work
+## 20. Future Work
 
 - Replace JSON job storage with Postgres or another production database.
 - Add decentralized relayer or solver competition.
@@ -650,8 +677,8 @@ npm run benchmark
 - Support multiple independent Agent nodes submitting intents concurrently.
 - Extend batching across multiple smart accounts using ERC-4337 UserOperation
   bundling or a shared settlement contract.
-- Add solver-style matching for swap intents, such as CoW-style internal
-  crossing before falling back to Uniswap.
+- Connect the current solver-style matching planner to an on-chain settlement
+  contract for internal crossing before falling back to Uniswap.
 - Replace demo Agent private-key storage with MPC/KMS/HSM/TEE or external
   self-signing Agent infrastructure.
 - Add event indexing for richer Sepolia history.
@@ -660,7 +687,7 @@ npm run benchmark
 - Add formal verification or invariant tests for escrow and smart-account
   authorization logic.
 
-## 20. Conclusion
+## 21. Conclusion
 
 The project delivers a full AI Coding implementation of an AI-powered on-chain
 agent protocol: requirements analysis, Solidity protocol contracts, AI parser,

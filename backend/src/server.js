@@ -1,4 +1,5 @@
 import { createIntentStore } from "./storage/intentStore.js";
+import { createExecutionPlanStore } from "./storage/planStore.js";
 import { validateIntentInput } from "./intents/schema.js";
 import { buildBatches } from "./coordinator/batcher.js";
 import { createCoordinatorJobStore } from "./coordinator/jobStore.js";
@@ -31,6 +32,7 @@ import http from "node:http";
 export function createBackendServer(options = {}) {
   const supabaseMirror = options.supabaseMirror ?? createSupabaseMirrorFromEnv();
   const store = options.store ?? createIntentStore({ mirror: supabaseMirror });
+  const planStore = options.planStore ?? createExecutionPlanStore();
   const batchSize = options.batchSize ?? 5;
   const intentParser = options.intentParser ?? createIntentParser(options.ai ?? {});
   const uniswap = options.uniswap ?? createUniswapService(options.uniswapOptions ?? {});
@@ -125,9 +127,28 @@ export function createBackendServer(options = {}) {
       }
 
       if (req.method === "POST" && url.pathname === "/batches/build") {
-        const batches = buildBatches(store.listIntents(), { batchSize, now: new Date() });
+        const intents = store.listIntents();
+        const aggregationPlan = buildAndStoreAggregationPlan(planStore, intents);
+        const batches = buildBatches(intents, { batchSize, now: new Date() });
         const created = batches.map((batch) => store.createBatch(batch));
-        return sendJson(res, 201, { batches: created });
+        return sendJson(res, 201, { batches: created, aggregationPlan });
+      }
+
+      if (req.method === "GET" && url.pathname === "/plans") {
+        return sendJson(res, 200, { plans: planStore.listPlans() });
+      }
+
+      if (req.method === "POST" && url.pathname === "/plans/build") {
+        const body = await readJson(req);
+        const sourceIntents = body.intents ?? store.listIntents();
+        const plan = createAggregationPlan(sourceIntents, {
+          ethPriceUsdc: body.ethPriceUsdc
+        });
+        const created = planStore.createPlan({
+          ...plan,
+          source: body.intents ? "request" : "intent-pool"
+        });
+        return sendJson(res, 201, { plan: created });
       }
 
       if (req.method === "POST" && url.pathname === "/aggregator/plan") {
@@ -320,7 +341,12 @@ export function createBackendServer(options = {}) {
 
       if (req.method === "GET" && url.pathname === "/metrics") {
         return sendJson(res, 200, {
-          metrics: computeMetrics(store.listIntents(), store.listBatches(), coordinatorJobs.listJobs())
+          metrics: computeMetrics(
+            store.listIntents(),
+            store.listBatches(),
+            coordinatorJobs.listJobs(),
+            planStore.listPlans()
+          )
         });
       }
 
@@ -331,6 +357,21 @@ export function createBackendServer(options = {}) {
         error: error.message ?? "Internal server error"
       });
     }
+  });
+}
+
+function buildAndStoreAggregationPlan(planStore, intents) {
+  const queuedSwaps = intents.filter(
+    (intent) => intent.status === "QUEUED" && String(intent.intentType).toLowerCase() === "swap"
+  );
+  if (queuedSwaps.length === 0) {
+    return null;
+  }
+
+  const plan = createAggregationPlan(queuedSwaps);
+  return planStore.createPlan({
+    ...plan,
+    source: "batches-build"
   });
 }
 

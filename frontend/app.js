@@ -1964,6 +1964,7 @@ function renderHistory() {
 
 function renderMetrics() {
   const metrics = mergeLocalBatchMetrics(state.metrics?.coordinator);
+  const aggregation = state.metrics?.aggregation;
   if (!metrics) {
     el.metricsUpdated.textContent = "Metrics unavailable";
     el.metricsCards.innerHTML = metricCards([
@@ -1987,7 +1988,10 @@ function renderMetrics() {
     ["Throughput", `${formatThroughput(metrics.throughputPerMinute)}/min`, "Confirmed jobs"],
     ["Avg latency", formatDuration(metrics.averageLatencyMs), "Due time to confirmation"],
     ["No-batch gas", formatNumber(metrics.estimatedNonBatchedGas), "Estimated separate execution cost"],
-    ["Batch gas saved", formatGasSaved(metrics), `${formatPercent(metrics.estimatedGasSavedPercent)} estimated saving`]
+    ["Batch gas saved", formatGasSaved(metrics), `${formatPercent(metrics.estimatedGasSavedPercent)} estimated saving`],
+    ["Match rate", formatPercent(aggregation?.latestMatchRate ?? 0), aggregation?.latestPlanType ?? "No aggregation plan"],
+    ["Matched volume", `$${formatDecimal(aggregation?.latestMatchedVolumeUsd ?? 0)}`, `${formatNumber(aggregation?.latestMatchedPairs ?? 0)} matched pair(s)`],
+    ["External route", `$${formatDecimal(aggregation?.latestExternalRoutedVolumeUsd ?? 0)}`, `${formatNumber(aggregation?.totalPlans ?? 0)} plan(s) built`]
   ]);
 
   if (!el.batchMetricRows) {

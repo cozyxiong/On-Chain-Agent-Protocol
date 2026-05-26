@@ -155,6 +155,8 @@ Useful endpoints:
 - `POST /intents`
 - `POST /batches/build`
 - `POST /aggregator/plan`
+- `GET /plans`
+- `POST /plans/build`
 - `POST /coordinator/simulate-execution`
 - `GET /coordinator/jobs`
 - `POST /coordinator/jobs`
