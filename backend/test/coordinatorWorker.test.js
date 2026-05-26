@@ -83,6 +83,51 @@ test("coordinator worker executes due agent jobs as smart-account batch", async 
   assert.equal(store.getJob("agent-job-2").txHash, "0x" + "b".repeat(64));
 });
 
+test("coordinator worker splits agent batches by smart account", async () => {
+  const store = createCoordinatorJobStore({ filePath: tempPath("agent-compatible") });
+  store.createJobs([
+    agentJob("agent-job-3", "shared-batch", transferIntent("0.0001"), {
+      smartAccount: "0x1111111111111111111111111111111111111111"
+    }),
+    agentJob("agent-job-4", "shared-batch", transferIntent("0.0002"), {
+      smartAccount: "0x4444444444444444444444444444444444444444"
+    })
+  ]);
+
+  const singleCalls = [];
+  const batchCalls = [];
+  const worker = createCoordinatorWorker({
+    store,
+    getReceipt: async () => null,
+    settlement: {},
+    agentExecutor: {
+      async executeAgentIntent(input) {
+        singleCalls.push(input);
+        return { primaryTxHash: `0x${String(singleCalls.length).repeat(64)}` };
+      },
+      async executeBatchAgentIntents(input) {
+        batchCalls.push(input);
+        return { primaryTxHash: "0x" + "b".repeat(64) };
+      }
+    }
+  });
+
+  await worker.tick();
+
+  assert.equal(batchCalls.length, 0);
+  assert.equal(singleCalls.length, 2);
+  assert.deepEqual(
+    singleCalls.map((call) => call.smartAccount),
+    [
+      "0x1111111111111111111111111111111111111111",
+      "0x4444444444444444444444444444444444444444"
+    ]
+  );
+  assert.equal(store.getJob("agent-job-3").status, "SUBMITTED");
+  assert.equal(store.getJob("agent-job-4").status, "SUBMITTED");
+  assert.notEqual(store.getJob("agent-job-3").txHash, store.getJob("agent-job-4").txHash);
+});
+
 function signedJob(jobId, batchGroupId) {
   return {
     jobId,
@@ -97,15 +142,15 @@ function signedJob(jobId, batchGroupId) {
   };
 }
 
-function agentJob(jobId, batchGroupId, intent) {
+function agentJob(jobId, batchGroupId, intent, overrides = {}) {
   return {
     jobId,
     kind: "agent-call",
     batchGroupId,
     runAt: new Date(Date.now() - 1000).toISOString(),
     payload: {
-      smartAccount: "0x1111111111111111111111111111111111111111",
-      agent: "0x2222222222222222222222222222222222222222",
+      smartAccount: overrides.smartAccount ?? "0x1111111111111111111111111111111111111111",
+      agent: overrides.agent ?? "0x2222222222222222222222222222222222222222",
       intent
     }
   };

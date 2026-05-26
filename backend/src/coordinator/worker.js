@@ -78,19 +78,30 @@ export function createCoordinatorWorker(options) {
       return;
     }
 
-    await executeJobSet(executable, summary, async () =>
-      executable.length > 1
-        ? agentExecutor.executeBatchAgentIntents({
-            smartAccount: executable[0].payload.smartAccount,
-            agent: executable[0].payload.agent,
-            intents: executable.map((job) => job.payload.intent)
-          })
-        : agentExecutor.executeAgentIntent({
-            smartAccount: executable[0].payload.smartAccount,
-            agent: executable[0].payload.agent,
-            intent: executable[0].payload.intent
-          })
-    );
+    const { compatibleGroups, invalidJobs } = groupCompatibleAgentJobs(executable);
+    if (invalidJobs.length > 0) {
+      await failJobSet(
+        invalidJobs,
+        summary,
+        new Error("Agent jobs require valid smartAccount and agent addresses")
+      );
+    }
+
+    for (const compatible of compatibleGroups) {
+      await executeJobSet(compatible, summary, async () =>
+        compatible.length > 1
+          ? agentExecutor.executeBatchAgentIntents({
+              smartAccount: compatible[0].payload.smartAccount,
+              agent: compatible[0].payload.agent,
+              intents: compatible.map((job) => job.payload.intent)
+            })
+          : agentExecutor.executeAgentIntent({
+              smartAccount: compatible[0].payload.smartAccount,
+              agent: compatible[0].payload.agent,
+              intent: compatible[0].payload.intent
+            })
+      );
+    }
   }
 
   async function executeJobSet(executable, summary, execute) {
@@ -151,6 +162,41 @@ function groupBy(items, keyFn) {
     groups.set(key, group);
   }
   return groups;
+}
+
+function groupCompatibleAgentJobs(jobs) {
+  const groups = new Map();
+  const invalidJobs = [];
+
+  for (const job of jobs) {
+    const smartAccount = job.payload?.smartAccount;
+    const agent = job.payload?.agent;
+
+    if (!isAddress(smartAccount) || !isAddress(agent)) {
+      invalidJobs.push(job);
+      continue;
+    }
+
+    // batchGroupId is a scheduling hint. Execution batching still has to respect
+    // the smart-account permission boundary enforced by AgentSmartAccount.
+    const key = [
+      smartAccount.toLowerCase(),
+      agent.toLowerCase(),
+      String(job.payload?.chainId ?? "")
+    ].join(":");
+    const group = groups.get(key) ?? [];
+    group.push(job);
+    groups.set(key, group);
+  }
+
+  return {
+    compatibleGroups: [...groups.values()],
+    invalidJobs
+  };
+}
+
+function isAddress(value) {
+  return /^0x[a-fA-F0-9]{40}$/.test(String(value ?? ""));
 }
 
 function summarizeReceipt(receipt) {
