@@ -4,6 +4,7 @@ import { buildBatches } from "./coordinator/batcher.js";
 import { createCoordinatorJobStore } from "./coordinator/jobStore.js";
 import { createCoordinatorWorker } from "./coordinator/worker.js";
 import { computeMetrics } from "./metrics/metrics.js";
+import { createAggregationPlan } from "./aggregator/matcher.js";
 import { createIntentParser } from "./ai/intentParser.js";
 import { listTokens } from "./tokens/tokenRegistry.js";
 import { createUniswapService } from "./uniswap/uniswapService.js";
@@ -127,6 +128,14 @@ export function createBackendServer(options = {}) {
         const batches = buildBatches(store.listIntents(), { batchSize, now: new Date() });
         const created = batches.map((batch) => store.createBatch(batch));
         return sendJson(res, 201, { batches: created });
+      }
+
+      if (req.method === "POST" && url.pathname === "/aggregator/plan") {
+        const body = await readJson(req);
+        const plan = createAggregationPlan(body.intents ?? store.listIntents(), {
+          ethPriceUsdc: body.ethPriceUsdc
+        });
+        return sendJson(res, 200, { plan });
       }
 
       if (req.method === "POST" && url.pathname === "/uniswap/quote") {

@@ -154,6 +154,7 @@ Useful endpoints:
 - `POST /ai/parse-intent`
 - `POST /intents`
 - `POST /batches/build`
+- `POST /aggregator/plan`
 - `POST /coordinator/simulate-execution`
 - `GET /coordinator/jobs`
 - `POST /coordinator/jobs`
